@@ -1,7 +1,5 @@
 const User = require('../models/User');
 const Product = require('../models/Product');
-const Exchange = require('../models/Exchange');
-const cryptoBotService = require('../services/cryptoBotService');
 
 class BotController {
   constructor(bot) {
@@ -10,22 +8,35 @@ class BotController {
 
   async handleStart(msg) {
     const chatId = msg.chat.id;
-    const user = await this.getOrCreateUser(msg.from);
+    const userData = msg.from;
+    
+    // Получаем или создаем пользователя
+    let user = await User.findOne({ telegramId: chatId });
+    if (!user) {
+      user = new User({
+        telegramId: chatId,
+        username: userData.username,
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        isAdmin: chatId.toString() === process.env.ADMIN_ID
+      });
+      await user.save();
+    }
     
     const welcomeText = `🎉 Добро пожаловать в UNIVERSAL SHOP!\n\n` +
-      `💰 Баланс: ${user.balance} RUB\n` +
-      `💵 USDT: ${user.usdtBalance}\n` +
+      `💰 Баланс: ${user.usdtBalance} USDT\n` +
       `⚡ TON: ${user.tonBalance}\n\n` +
-      `Выберите действие:`;
+      `🔗 Ваша персональная страница:\n` +
+      `${process.env.WEB_APP_URL}/?user=${chatId}`;
     
     const keyboard = {
       reply_markup: {
-        keyboard: [
-          ['🛒 Магазин', '🔄 Обменник'],
-          ['👤 Профиль', '🎨 Кастомизация'],
-          ['📞 Поддержка']
-        ],
-        resize_keyboard: true
+        inline_keyboard: [
+          [{ text: '🎨 Открыть редактор', url: `${process.env.WEB_APP_URL}/?user=${chatId}` }],
+          [{ text: '🛒 Магазин', callback_data: 'shop' }],
+          [{ text: '🔄 Обменник', callback_data: 'exchange' }],
+          [{ text: '👤 Профиль', callback_data: 'profile' }]
+        ]
       }
     };
     
@@ -41,7 +52,6 @@ class BotController {
       return;
     }
     
-    // Отправка товаров с кнопками покупки
     for (const product of products) {
       const text = `🎁 ${product.name}\n` +
         `📝 ${product.description}\n` +
@@ -51,71 +61,35 @@ class BotController {
       const keyboard = {
         reply_markup: {
           inline_keyboard: [[
-            { text: `Купить за ${product.price} ${product.currency}`, callback_data: `buy_${product._id}` }
+            { 
+              text: `Купить за ${product.price} ${product.currency}`, 
+              callback_data: `buy_${product._id}` 
+            }
           ]]
         }
       };
       
-      if (product.imageUrl) {
-        this.bot.sendPhoto(chatId, product.imageUrl, { caption: text, ...keyboard });
-      } else {
-        this.bot.sendMessage(chatId, text, keyboard);
-      }
+      this.bot.sendMessage(chatId, text, keyboard);
     }
-  }
-
-  async handleExchange(msg) {
-    const chatId = msg.chat.id;
-    
-    const keyboard = {
-      reply_markup: {
-        keyboard: [
-          ['USDT → TON', 'TON → USDT'],
-          ['RUB → USDT', 'RUB → TON'],
-          ['↩️ Назад']
-        ],
-        resize_keyboard: true
-      }
-    };
-    
-    this.bot.sendMessage(chatId, '🔄 Выберите тип обмена:', keyboard);
   }
 
   async handleCustomize(msg) {
     const chatId = msg.chat.id;
-    const user = await User.findOne({ telegramId: chatId });
+    const personalizeUrl = `${process.env.WEB_APP_URL}/?user=${chatId}`;
     
-    const keyboard = {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🎨 Изменить фон', callback_data: 'custom_bg' }],
-          [{ text: '🖼️ Добавить фото', callback_data: 'add_image' }],
-          [{ text: '📝 Добавить надпись', callback_data: 'add_text' }],
-          [{ text: '🔘 Создать кнопку', callback_data: 'add_button' }],
-          [{ text: '⚙️ Мои настройки', callback_data: 'my_settings' }]
-        ]
-      }
-    };
-    
-    this.bot.sendMessage(chatId, '🎨 Мастерская кастомизации:\n\nЗдесь вы можете полностью настроить интерфейс бота под себя!', keyboard);
-  }
-
-  async getOrCreateUser(userData) {
-    let user = await User.findOne({ telegramId: userData.id });
-    
-    if (!user) {
-      user = new User({
-        telegramId: userData.id,
-        username: userData.username,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
-        isAdmin: userData.id.toString() === process.env.ADMIN_ID
-      });
-      await user.save();
-    }
-    
-    return user;
+    this.bot.sendMessage(chatId, 
+      `🎨 **Мастерская кастомизации**\n\n` +
+      `Перейдите по ссылке для настройки интерфейса:\n` +
+      `${personalizeUrl}\n\n` +
+      `Возможности:\n` +
+      `• Изменение фона\n` +
+      `• Добавление кнопок\n` +
+      `• Загрузка изображений\n` +
+      `• Добавление текста\n` +
+      `• Перетаскивание элементов\n`,
+      { parse_mode: 'Markdown' }
+    );
   }
 }
 
-module.exports = new BotController();
+module.exports = BotController;
