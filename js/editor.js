@@ -217,4 +217,191 @@ function loadExistingImages() {
 }
 
 function deleteImage(imageId) {
-    userData.customSettings.images = userData.customSettings.images.filter(img => img.id !== imageId
+    userData.customSettings.images = userData.customSettings.images.filter(img => img.id !== imageId);
+    saveSetting('images', userData.customSettings.images);
+    
+    // Удаляем со страницы
+    const imageElement = document.getElementById(imageId);
+    if (imageElement) {
+        imageElement.remove();
+    }
+    
+    loadExistingImages();
+    showNotification('Изображение удалено');
+}
+
+// Работа с текстом
+function createTextElement() {
+    const text = document.getElementById('text-content').value;
+    const size = document.getElementById('text-size').value;
+    const color = document.getElementById('text-color').value;
+    
+    if (!text) {
+        alert('Введите текст');
+        return;
+    }
+    
+    const textId = 'txt_' + Date.now();
+    const textData = {
+        id: textId,
+        text: text,
+        size: size,
+        color: color,
+        position: { x: 50, y: 500 }
+    };
+    
+    // Добавляем в массив
+    userData.customSettings.texts.push(textData);
+    saveSetting('texts', userData.customSettings.texts);
+    
+    // Создаем элемент на странице
+    createTextElementOnPage(textData);
+    
+    // Очищаем поле
+    document.getElementById('text-content').value = '';
+    
+    showNotification('Текст добавлен!');
+}
+
+function createTextElementOnPage(textData) {
+    const container = document.getElementById('user-texts-container');
+    const textElement = document.createElement('div');
+    textElement.id = textData.id;
+    textElement.className = 'user-text';
+    textElement.textContent = textData.text;
+    textElement.style.fontSize = textData.size + 'px';
+    textElement.style.color = textData.color;
+    textElement.style.position = 'absolute';
+    textElement.style.left = textData.position.x + 'px';
+    textElement.style.top = textData.position.y + 'px';
+    
+    // Делаем перетаскиваемой
+    makeDraggable(textElement);
+    
+    container.appendChild(textElement);
+}
+
+// Перетаскивание элементов
+function initDraggableElements() {
+    userData.customSettings.buttons.forEach(createButtonElement);
+    userData.customSettings.images.forEach(createImageElement);
+    userData.customSettings.texts.forEach(createTextElementOnPage);
+}
+
+function makeDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    
+    element.onmousedown = dragMouseDown;
+    
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        
+        // Получаем начальную позицию курсора
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+    
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        
+        // Вычисляем новую позицию
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        // Устанавливаем новую позицию
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+        
+        // Сохраняем позицию в настройках
+        saveElementPosition(element.id, {
+            x: element.offsetLeft - pos1,
+            y: element.offsetTop - pos2
+        });
+    }
+    
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+
+// Сохранение настроек
+function saveSetting(key, value) {
+    userData.customSettings[key] = value;
+    localStorage.setItem('userSettings', JSON.stringify(userData.customSettings));
+    
+    // Сохраняем на сервере
+    if (userData.id) {
+        saveSettingsToServer();
+    }
+}
+
+function saveElementPosition(elementId, position) {
+    // Находим элемент в массиве и обновляем позицию
+    const elementType = elementId.startsWith('btn_') ? 'buttons' :
+                       elementId.startsWith('img_') ? 'images' : 'texts';
+    
+    const element = userData.customSettings[elementType].find(el => el.id === elementId);
+    if (element) {
+        element.position = position;
+        saveSetting(elementType, userData.customSettings[elementType]);
+    }
+}
+
+async function saveSettingsToServer() {
+    try {
+        await fetch('/api/save-settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: userData.id,
+                settings: userData.customSettings
+            })
+        });
+    } catch (error) {
+        console.error('Error saving settings:', error);
+    }
+}
+
+function loadUserSettings() {
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+        userData.customSettings = JSON.parse(savedSettings);
+        
+        // Применяем настройки фона
+        if (userData.customSettings.background) {
+            document.querySelector('.dynamic-background').style.background = 
+                userData.customSettings.background;
+        }
+    }
+}
+
+// Обработчики событий для загрузки файлов
+document.addEventListener('DOMContentLoaded', function() {
+    // Фон
+    document.getElementById('bg-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.querySelector('.dynamic-background').style.backgroundImage = 
+                    `url(${e.target.result})`;
+                saveSetting('background', `url(${e.target.result})`);
+                showNotification('Фон обновлен!');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Изображения
+    document.getElementById('image-upload').addEventListener('change', handleImageUpload);
+});
