@@ -1,10 +1,10 @@
 [build]
   publish = "public"
-  command = "npm install"
+  command = "echo 'No build command needed'"
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/bot/:splat"
+  to = "/.netlify/functions/bot"
   status = 200
 
 [[redirects]]
@@ -13,4 +13,4 @@
   status = 200
 
 [functions]
-  node_bundler = "esbuild"
+  directory = "netlify/functions"
