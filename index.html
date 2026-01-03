@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNIVERSAL SHOP | Магазин и обменник USDT/TON</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Главный контейнер для всего контента -->
+    <div id="app" class="app-container">
+        <!-- Динамический фон -->
+        <div id="dynamic-background" class="dynamic-background"></div>
+        
+        <!-- Панель инструментов -->
+        <div class="toolbar">
+            <button onclick="openEditor()" class="toolbar-btn">🎨 Редактор</button>
+            <button onclick="openShop()" class="toolbar-btn">🛒 Магазин</button>
+            <button onclick="openExchange()" class="toolbar-btn">🔄 Обмен</button>
+            <button onclick="openWallet()" class="toolbar-btn">💰 Кошелёк</button>
+        </div>
+
+        <!-- Контейнер для пользовательских кнопок -->
+        <div id="user-buttons-container" class="buttons-container"></div>
+        
+        <!-- Контейнер для пользовательских изображений -->
+        <div id="user-images-container" class="images-container"></div>
+        
+        <!-- Контейнер для пользовательских текстов -->
+        <div id="user-texts-container" class="texts-container"></div>
+        
+        <!-- Основной контент -->
+        <div id="main-content" class="main-content">
+            <div class="welcome-section" id="welcome-section">
+                <h1 id="main-title">UNIVERSAL SHOP</h1>
+                <p id="main-subtitle">Магазин и обменник USDT/TON с полной кастомизацией</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="balance-usdt">0 USDT</div>
+                        <div class="stat-label">Баланс USDT</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value" id="balance-ton">0 TON</div>
+                        <div class="stat-label">Баланс TON</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💎</div>
+                        <div class="stat-value" id="exchange-rate">1 USDT = ... TON</div>
+                        <div class="stat-label">Курс обмена</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Магазин (скрыт по умолчанию) -->
+            <div id="shop-section" class="content-section" style="display: none;">
+                <h2>🛒 Магазин</h2>
+                <div id="products-grid" class="products-grid"></div>
+            </div>
+            
+            <!-- Обменник (скрыт по умолчанию) -->
+            <div id="exchange-section" class="content-section" style="display: none;">
+                <h2>🔄 Обменник USDT/TON</h2>
+                <div class="exchange-form">
+                    <div class="exchange-input">
+                        <input type="number" id="exchange-amount" placeholder="Сумма" value="100">
+                        <select id="exchange-from">
+                            <option value="USDT">USDT</option>
+                            <option value="TON">TON</option>
+                        </select>
+                    </div>
+                    <div class="exchange-arrow">⇄</div>
+                    <div class="exchange-input">
+                        <input type="number" id="exchange-result" placeholder="Получите" readonly>
+                        <select id="exchange-to">
+                            <option value="TON">TON</option>
+                            <option value="USDT">USDT</option>
+                        </select>
+                    </div>
+                    <button onclick="performExchange()" class="exchange-btn">Обменять</button>
+                </div>
+            </div>
+            
+            <!-- Кошелёк (скрыт по умолчанию) -->
+            <div id="wallet-section" class="content-section" style="display: none;">
+                <h2>💰 Мой Кошелёк</h2>
+                <div class="wallet-info">
+                    <div class="wallet-balance">
+                        <div class="currency-balance">
+                            <span class="currency-icon">💵</span>
+                            <span class="currency-amount" id="wallet-usdt">0 USDT</span>
+                        </div>
+                        <div class="currency-balance">
+                            <span class="currency-icon">⚡</span>
+                            <span class="currency-amount" id="wallet-ton">0 TON</span>
+                        </div>
+                    </div>
+                    <div class="wallet-actions">
+                        <button onclick="depositCrypto('USDT')" class="action-btn">Пополнить USDT</button>
+                        <button onclick="depositCrypto('TON')" class="action-btn">Пополнить TON</button>
+                        <button onclick="withdrawCrypto()" class="action-btn">Вывести</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно редактора -->
+        <div id="editor-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎨 Мастерская кастомизации</h2>
+                    <button onclick="closeEditor()" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="editor-tabs">
+                        <button onclick="openEditorTab('background')" class="tab-btn active">Фон</button>
+                        <button onclick="openEditorTab('buttons')" class="tab-btn">Кнопки</button>
+                        <button onclick="openEditorTab('images')" class="tab-btn">Изображения</button>
+                        <button onclick="openEditorTab('text')" class="tab-btn">Текст</button>
+                        <button onclick="openEditorTab('elements')" class="tab-btn">Элементы</button>
+                    </div>
+                    
+                    <div id="editor-background" class="editor-tab active">
+                        <h3>🎨 Изменить фон</h3>
+                        <div class="color-picker">
+                            <input type="color" id="bg-color" value="#667eea" onchange="changeBackgroundColor(this.value)">
+                            <label for="bg-color">Цвет фона</label>
+                        </div>
+                        <div class="bg-options">
+                            <button onclick="setBackgroundGradient()" class="bg-option">Градиент</button>
+                            <button onclick="setBackgroundImage()" class="bg-option">Изображение</button>
+                            <button onclick="setBackgroundPattern()" class="bg-option">Узор</button>
+                        </div>
+                        <div class="upload-section">
+                            <input type="file" id="bg-upload" accept="image/*" style="display: none;">
+                            <button onclick="document.getElementById('bg-upload').click()" class="upload-btn">
+                                📤 Загрузить своё фото
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="editor-buttons" class="editor-tab" style="display: none;">
+                        <h3>🔘 Создать кнопку</h3>
+                        <div class="form-group">
+                            <input type="text" id="btn-text" placeholder="Текст кнопки" class="form-input">
+                            <input type="text" id="btn-url" placeholder="URL или команда" class="form-input">
+                            <select id="btn-style" class="form-select">
+                                <option value="primary">Основная</option>
+                                <option value="secondary">Вторичная</option>
+                                <option value="success">Успех</option>
+                                <option value="danger">Опасность</option>
+                            </select>
+                            <button onclick="createButton()" class="create-btn">Создать кнопку</button>
+                        </div>
+                        <div id="existing-buttons" class="existing-items"></div>
+                    </div>
+                    
+                    <div id="editor-images" class="editor-tab" style="display: none;">
+                        <h3>🖼️ Добавить изображение</h3>
+                        <div class="upload-section">
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                            <button onclick="document.getElementById('image-upload').click()" class="upload-btn">
+                                📤 Загрузить изображение
+                            </button>
+                            <div id="uploaded-images" class="images-grid"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="editor-text" class="editor-tab" style="display: none;">
+                        <h3>📝 Добавить текст</h3>
+                        <div class="form-group">
+                            <input type="text" id="text-content" placeholder="Текст" class="form-input">
+                            <input type="number" id="text-size" placeholder="Размер (px)" value="16" class="form-input">
+                            <input type="color" id="text-color" value="#ffffff">
+                            <button onclick="createTextElement()" class="create-btn">Добавить текст</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Уведомления -->
+        <div id="notification" class="notification"></div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/telegram.js"></script>
+</body>
+</html>
